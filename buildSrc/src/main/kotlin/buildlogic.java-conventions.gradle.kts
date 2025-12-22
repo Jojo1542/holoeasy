@@ -51,11 +51,28 @@ dependencies {
 }
 
 group = "org.holoeasy"
-version = "5.0.0-rc.2"
+project.version = "5.0.1"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
-publishing {
-    publications.create<MavenPublication>("maven") {
-        from(components["java"])
+val version = project.version.toString()
+val type = if (version.endsWith("SNAPSHOT") || version.endsWith("DEV")) "snapshots" else "releases"
+
+tasks {
+    publishing {
+        publications {
+            create<MavenPublication>("maven") {
+                artifactId = project.name
+                version = project.version.toString()
+                from(project.components["java"])
+            }
+        }
+
+        repositories {
+            maven {
+                name = "comugamersRepository"
+                url = uri("https://repo.comugamers.com/repository/maven-${type}/")
+                credentials(PasswordCredentials::class)
+            }
+        }
     }
 }

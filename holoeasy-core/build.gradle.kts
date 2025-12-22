@@ -1,6 +1,7 @@
 plugins {
     id("buildlogic.java-conventions")
     `kotlin-dsl`
+    `maven-publish`
 }
 
 repositories {
@@ -20,6 +21,5 @@ tasks.register("printVersion") {
         println(project.version)
     }
 }
-
 
 description = "holoeasy-core"

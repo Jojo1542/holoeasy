@@ -22,4 +22,3 @@
 rootProject.name = "holoeasy"
 include(":holoeasy-core")
 include(":holoeasy-example-java")
-include(":holoeasy-example-kotlin")
