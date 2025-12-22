@@ -136,5 +136,7 @@ public abstract class Line<T> {
         DISPLAY_ITEM_LINE,
         @ApiStatus.Experimental
         INTERACTION_LINE,
+        @ApiStatus.Experimental
+        COMPOSITE_LINE,
     }
 }

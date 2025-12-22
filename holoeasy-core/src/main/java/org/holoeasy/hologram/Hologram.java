@@ -69,7 +69,7 @@ public class Hologram {
         return this;
     }
 
-    protected @NotNull ItemLine itemLine(@NotNull Function<@NotNull Player, @NotNull ItemStack> itemSupplier) {
+    public @NotNull ItemLine itemLine(@NotNull Function<@NotNull Player, @NotNull ItemStack> itemSupplier) {
         ItemLine line = new ItemLine(this, itemSupplier);
         lines.add(line);
         return line;
@@ -80,7 +80,7 @@ public class Hologram {
         return this;
     }
 
-    protected @NotNull TextLine textLine(@NotNull Function<@NotNull Player, @NotNull String> textSupplier) {
+    public @NotNull TextLine textLine(@NotNull Function<@NotNull Player, @NotNull String> textSupplier) {
         TextLine line = new TextLine(this, textSupplier);
         lines.add(line);
         return line;
@@ -91,7 +91,7 @@ public class Hologram {
         return this;
     }
 
-    protected @NotNull TextComponentLine componentLine(@NotNull Function<@NotNull Player, @NotNull Component> textSupplier) {
+    public @NotNull TextComponentLine componentLine(@NotNull Function<@NotNull Player, @NotNull Component> textSupplier) {
         TextComponentLine line = new TextComponentLine(this, textSupplier);
         lines.add(line);
         return line;
@@ -104,7 +104,7 @@ public class Hologram {
 
 
     @ApiStatus.Experimental
-    protected @NotNull DisplayTextLine displayTextLine(@NotNull Function<@NotNull Player, @NotNull Component> textSupplier) {
+    public @NotNull DisplayTextLine displayTextLine(@NotNull Function<@NotNull Player, @NotNull Component> textSupplier) {
         DisplayTextLine line = new DisplayTextLine(this, textSupplier);
         lines.add(line);
         return line;
@@ -116,7 +116,7 @@ public class Hologram {
     }
 
     @ApiStatus.Experimental
-    protected @NotNull DisplayBlockLine displayBlockLine(@NotNull Function<@NotNull Player, @NotNull Material> materialSupplier) {
+    public @NotNull DisplayBlockLine displayBlockLine(@NotNull Function<@NotNull Player, @NotNull Material> materialSupplier) {
         DisplayBlockLine line = new DisplayBlockLine(this, materialSupplier);
         lines.add(line);
         return line;
@@ -128,8 +128,37 @@ public class Hologram {
     }
 
     @ApiStatus.Experimental
+    public @NotNull DisplayItemLine displayItemLine(@NotNull Function<@NotNull Player, @NotNull ItemStack> itemSupplier) {
+        DisplayItemLine line = new DisplayItemLine(this, itemSupplier);
+        lines.add(line);
+        return line;
+    }
+
+    public Hologram displayItemLine(@NotNull ItemStack material) {
+        displayItemLine(player -> material);
+        return this;
+    }
+
+    @ApiStatus.Experimental
     protected @NotNull InteractionLine interactionLine() {
         InteractionLine line = new InteractionLine(this);
+        lines.add(line);
+        return line;
+    }
+
+    /**
+     * Create a composite display line that can contain multiple display elements horizontally.
+     * <p>Example:</p>
+     * <pre>{@code
+     * compositeLine()
+     *     .add(new ItemDisplayElement(diamondSword).scale(0.5f))
+     *     .addSpacer(0.2f)
+     *     .add(new TextDisplayElement("x5"))
+     * }</pre>
+     */
+    @ApiStatus.Experimental
+    public @NotNull CompositeDisplayLine compositeLine() {
+        CompositeDisplayLine line = new CompositeDisplayLine(this);
         lines.add(line);
         return line;
     }

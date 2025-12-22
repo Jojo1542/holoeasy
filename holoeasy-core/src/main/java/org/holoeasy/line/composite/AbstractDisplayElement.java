@@ -1,29 +1,35 @@
-package org.holoeasy.line;
+package org.holoeasy.line.composite;
 
+import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 import com.github.retrooper.packetevents.util.Quaternion4f;
 import com.github.retrooper.packetevents.util.Vector3f;
-import org.bukkit.Color;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDestroyEntities;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.holoeasy.hologram.Hologram;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Abstract base class for Display entities (TextDisplay, BlockDisplay, ItemDisplay).
- * Contains common Display entity properties available in 1.21.10+
+ * Abstract base class for display elements in a CompositeDisplayLine.
+ * Provides common display entity properties and packet handling.
  */
-@ApiStatus.Experimental
-public abstract class AbstractDisplayLine<T, SELF extends AbstractDisplayLine<T, SELF>> extends Line<T> {
+public abstract class AbstractDisplayElement<T, SELF extends AbstractDisplayElement<T, SELF>> implements CompositeElement {
 
-    // Metadata indices for Display base entity
+    protected static final AtomicInteger IDs_COUNTER = new AtomicInteger(10000 + new Random().nextInt(1000));
+
+    // Metadata indices for Display base entity (1.21.10+)
     protected static final int INDEX_INTERPOLATION_DELAY = 8;
     protected static final int INDEX_TRANSFORMATION_INTERPOLATION_DURATION = 9;
     protected static final int INDEX_POSITION_ROTATION_INTERPOLATION_DURATION = 10;
@@ -40,28 +46,37 @@ public abstract class AbstractDisplayLine<T, SELF extends AbstractDisplayLine<T,
     protected static final int INDEX_DISPLAY_HEIGHT = 21;
     protected static final int INDEX_GLOW_COLOR_OVERRIDE = 22;
 
-    // Track which metadata fields have been explicitly set
     protected final Set<Integer> modifiedFields = new HashSet<>();
 
-    // Display base properties (defaults match Minecraft client defaults)
+    protected final EntityType entityType;
+    protected final int entityId;
+
+    // Element width for positioning
+    protected float width = 0.5f;
+
+    // Display base properties
     protected int interpolationDelay = 0;
     protected int transformationInterpolationDuration = 0;
     protected int positionRotationInterpolationDuration = 0;
-    protected Vector3f translation = new Vector3f(0.0f, 0.0f, 0.0f);
+    protected Vector3f baseTranslation = new Vector3f(0.0f, 0.0f, 0.0f);
     protected Vector3f scale = new Vector3f(1.0f, 1.0f, 1.0f);
     protected Quaternion4f rotationLeft = new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f);
     protected Quaternion4f rotationRight = new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f);
-    protected byte billboard = 0;
-    protected int brightness = -1; // -1 = no override
+    protected byte billboard = 3; // CENTER by default for composite elements
+    protected int brightness = -1;
     protected float viewRange = 1.0f;
     protected float shadowRadius = 0.0f;
     protected float shadowStrength = 1.0f;
     protected float displayWidth = 0.0f;
     protected float displayHeight = 0.0f;
-    protected int glowColorOverride = -1; // -1 = no override
+    protected int glowColorOverride = -1;
 
-    public AbstractDisplayLine(Hologram hologram, EntityType entityType, Function<Player, T> valueSupplier) {
-        super(hologram, entityType, valueSupplier);
+    // Location storage
+    protected Location spawnLocation;
+
+    protected AbstractDisplayElement(EntityType entityType) {
+        this.entityType = entityType;
+        this.entityId = IDs_COUNTER.getAndIncrement();
     }
 
     @SuppressWarnings("unchecked")
@@ -69,12 +84,70 @@ public abstract class AbstractDisplayLine<T, SELF extends AbstractDisplayLine<T,
         return (SELF) this;
     }
 
+    @Override
+    public float getWidth() {
+        return width;
+    }
+
+    @Override
+    public int getEntityId() {
+        return entityId;
+    }
+
     /**
-     * Add Display base entity data for 1.21.10+ to the provided list.
-     * Only includes fields that have been explicitly modified.
-     * Subclasses should call this in their update() method.
+     * Set the width this element occupies.
      */
-    protected void addDisplayBaseMetadata(List<EntityData<?>> entityData) {
+    public SELF width(float width) {
+        this.width = width;
+        return self();
+    }
+
+    @Override
+    public void spawn(@NotNull Player player, float x, float y, float z) {
+        Location loc = spawnLocation;
+        if (loc == null) return;
+
+        WrapperPlayServerSpawnEntity packet = new WrapperPlayServerSpawnEntity(
+                entityId,
+                UUID.randomUUID(),
+                entityType,
+                SpigotConversionUtil.fromBukkitLocation(loc),
+                loc.getYaw(),
+                0,
+                null
+        );
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
+
+        // Immediately update with metadata including translation
+        update(player, x, y, z);
+    }
+
+    @Override
+    public void despawn(@NotNull Player player) {
+        WrapperPlayServerDestroyEntities packet = new WrapperPlayServerDestroyEntities(entityId);
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
+    }
+
+    /**
+     * Set spawn location (called by CompositeDisplayLine).
+     */
+    public void setSpawnLocation(Location location) {
+        this.spawnLocation = location;
+    }
+
+    /**
+     * Add Display base entity metadata to the list.
+     * Translation is computed from base translation + offset.
+     */
+    protected void addDisplayBaseMetadata(List<EntityData<?>> entityData, float offsetX, float offsetY, float offsetZ) {
+        // Translation is always sent (combines base + offset)
+        Vector3f finalTranslation = new Vector3f(
+                baseTranslation.getX() + offsetX,
+                baseTranslation.getY() + offsetY,
+                baseTranslation.getZ() + offsetZ
+        );
+        entityData.add(new EntityData<>(INDEX_TRANSLATION, EntityDataTypes.VECTOR3F, finalTranslation));
+
         if (modifiedFields.contains(INDEX_INTERPOLATION_DELAY)) {
             entityData.add(new EntityData<>(INDEX_INTERPOLATION_DELAY, EntityDataTypes.INT, interpolationDelay));
         }
@@ -83,9 +156,6 @@ public abstract class AbstractDisplayLine<T, SELF extends AbstractDisplayLine<T,
         }
         if (modifiedFields.contains(INDEX_POSITION_ROTATION_INTERPOLATION_DURATION)) {
             entityData.add(new EntityData<>(INDEX_POSITION_ROTATION_INTERPOLATION_DURATION, EntityDataTypes.INT, positionRotationInterpolationDuration));
-        }
-        if (modifiedFields.contains(INDEX_TRANSLATION)) {
-            entityData.add(new EntityData<>(INDEX_TRANSLATION, EntityDataTypes.VECTOR3F, translation));
         }
         if (modifiedFields.contains(INDEX_SCALE)) {
             entityData.add(new EntityData<>(INDEX_SCALE, EntityDataTypes.VECTOR3F, scale));
@@ -124,266 +194,79 @@ public abstract class AbstractDisplayLine<T, SELF extends AbstractDisplayLine<T,
 
     // ==================== Builder Methods ====================
 
-    public SELF yOffset(double yOffset) {
-        super.setYOffset(yOffset);
-        return self();
-    }
-
-    /**
-     * Set billboard constraint (rotation behavior)
-     * @param billboard 0=FIXED, 1=VERTICAL, 2=HORIZONTAL, 3=CENTER
-     */
     public SELF billboard(byte billboard) {
         this.billboard = billboard;
         modifiedFields.add(INDEX_BILLBOARD);
         return self();
     }
 
-    /**
-     * Set interpolation delay in ticks.
-     */
     public SELF interpolationDelay(int delay) {
         this.interpolationDelay = delay;
         modifiedFields.add(INDEX_INTERPOLATION_DELAY);
         return self();
     }
 
-    /**
-     * Set translation offset.
-     */
     public SELF translation(float x, float y, float z) {
-        this.translation = new Vector3f(x, y, z);
-        modifiedFields.add(INDEX_TRANSLATION);
+        this.baseTranslation = new Vector3f(x, y, z);
         return self();
     }
 
-    /**
-     * Set translation offset.
-     */
-    public SELF translation(@NotNull Vector3f translation) {
-        this.translation = translation;
-        modifiedFields.add(INDEX_TRANSLATION);
-        return self();
-    }
-
-    /**
-     * Set translation X offset.
-     */
-    public SELF translationX(float x) {
-        this.translation = new Vector3f(x, translation.getY(), translation.getZ());
-        modifiedFields.add(INDEX_TRANSLATION);
-        return self();
-    }
-
-    /**
-     * Set translation Y offset.
-     */
-    public SELF translationY(float y) {
-        this.translation = new Vector3f(translation.getX(), y, translation.getZ());
-        modifiedFields.add(INDEX_TRANSLATION);
-        return self();
-    }
-
-    /**
-     * Set translation Z offset.
-     */
-    public SELF translationZ(float z) {
-        this.translation = new Vector3f(translation.getX(), translation.getY(), z);
-        modifiedFields.add(INDEX_TRANSLATION);
-        return self();
-    }
-
-    /**
-     * Set scale (size multiplier).
-     * @param scale uniform scale for all axes
-     */
     public SELF scale(float scale) {
         this.scale = new Vector3f(scale, scale, scale);
         modifiedFields.add(INDEX_SCALE);
         return self();
     }
 
-    /**
-     * Set scale (size multiplier) for each axis.
-     */
     public SELF scale(float x, float y, float z) {
         this.scale = new Vector3f(x, y, z);
         modifiedFields.add(INDEX_SCALE);
         return self();
     }
 
-    /**
-     * Set scale (size multiplier).
-     */
-    public SELF scale(@NotNull Vector3f scale) {
-        this.scale = scale;
-        modifiedFields.add(INDEX_SCALE);
-        return self();
-    }
-
-    /**
-     * Set scale X (size multiplier).
-     */
-    public SELF scaleX(float x) {
-        this.scale = new Vector3f(x, scale.getY(), scale.getZ());
-        modifiedFields.add(INDEX_SCALE);
-        return self();
-    }
-
-    /**
-     * Set scale Y (size multiplier).
-     */
-    public SELF scaleY(float y) {
-        this.scale = new Vector3f(scale.getX(), y, scale.getZ());
-        modifiedFields.add(INDEX_SCALE);
-        return self();
-    }
-
-    /**
-     * Set scale Z (size multiplier).
-     */
-    public SELF scaleZ(float z) {
-        this.scale = new Vector3f(scale.getX(), scale.getY(), z);
-        modifiedFields.add(INDEX_SCALE);
-        return self();
-    }
-
-    /**
-     * Set left rotation (applied before scale).
-     */
     public SELF rotationLeft(float x, float y, float z, float w) {
         this.rotationLeft = new Quaternion4f(x, y, z, w);
         modifiedFields.add(INDEX_ROTATION_LEFT);
         return self();
     }
 
-    /**
-     * Set left rotation (applied before scale).
-     */
-    public SELF rotationLeft(@NotNull Quaternion4f rotation) {
-        this.rotationLeft = rotation;
-        modifiedFields.add(INDEX_ROTATION_LEFT);
-        return self();
-    }
-
-    /**
-     * Set right rotation (applied after scale).
-     */
     public SELF rotationRight(float x, float y, float z, float w) {
         this.rotationRight = new Quaternion4f(x, y, z, w);
         modifiedFields.add(INDEX_ROTATION_RIGHT);
         return self();
     }
 
-    /**
-     * Set right rotation (applied after scale).
-     */
-    public SELF rotationRight(@NotNull Quaternion4f rotation) {
-        this.rotationRight = rotation;
-        modifiedFields.add(INDEX_ROTATION_RIGHT);
-        return self();
-    }
-
-    /**
-     * Set transformation interpolation duration in ticks.
-     */
     public SELF transformationInterpolationDuration(int duration) {
         this.transformationInterpolationDuration = duration;
         modifiedFields.add(INDEX_TRANSFORMATION_INTERPOLATION_DURATION);
         return self();
     }
 
-    /**
-     * Set position/rotation interpolation duration in ticks.
-     */
-    public SELF positionRotationInterpolationDuration(int duration) {
-        this.positionRotationInterpolationDuration = duration;
-        modifiedFields.add(INDEX_POSITION_ROTATION_INTERPOLATION_DURATION);
-        return self();
-    }
-
-    /**
-     * Set brightness override.
-     * @param blockLight 0-15
-     * @param skyLight 0-15
-     */
     public SELF brightness(int blockLight, int skyLight) {
         this.brightness = (blockLight << 4) | (skyLight << 20);
         modifiedFields.add(INDEX_BRIGHTNESS);
         return self();
     }
 
-    /**
-     * Disable brightness override (use natural lighting).
-     */
-    public SELF disableBrightnessOverride() {
-        this.brightness = -1;
-        modifiedFields.add(INDEX_BRIGHTNESS);
-        return self();
-    }
-
-    /**
-     * Set view range multiplier.
-     * @param range default is 1.0
-     */
     public SELF viewRange(float range) {
         this.viewRange = range;
         modifiedFields.add(INDEX_VIEW_RANGE);
         return self();
     }
 
-    /**
-     * Set shadow radius.
-     */
     public SELF shadowRadius(float radius) {
         this.shadowRadius = radius;
         modifiedFields.add(INDEX_SHADOW_RADIUS);
         return self();
     }
 
-    /**
-     * Set shadow strength.
-     * @param strength default is 1.0
-     */
     public SELF shadowStrength(float strength) {
         this.shadowStrength = strength;
         modifiedFields.add(INDEX_SHADOW_STRENGTH);
         return self();
     }
 
-    /**
-     * Set display width.
-     */
-    public SELF displayWidth(float width) {
-        this.displayWidth = width;
-        modifiedFields.add(INDEX_DISPLAY_WIDTH);
-        return self();
-    }
-
-    /**
-     * Set display height.
-     */
-    public SELF displayHeight(float height) {
-        this.displayHeight = height;
-        modifiedFields.add(INDEX_DISPLAY_HEIGHT);
-        return self();
-    }
-
-    /**
-     * Set glow color override.
-     * @param color ARGB color value, or -1 to disable
-     */
     public SELF glowColorOverride(int color) {
         this.glowColorOverride = color;
-        modifiedFields.add(INDEX_GLOW_COLOR_OVERRIDE);
-        return self();
-    }
-
-    /**
-     * Set glow color override using Bukkit Color.
-     */
-    public SELF glowColorOverride(@NotNull Color color) {
-        this.glowColorOverride = color.asRGB();
         modifiedFields.add(INDEX_GLOW_COLOR_OVERRIDE);
         return self();
     }

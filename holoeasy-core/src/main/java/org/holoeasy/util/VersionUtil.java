@@ -1,10 +1,13 @@
 package org.holoeasy.util;
 
 import org.bukkit.Bukkit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VersionUtil {
     private static final String VERSION;
     public static final VersionEnum CLEAN_VERSION;
+    private static final Logger log = LoggerFactory.getLogger(VersionUtil.class);
 
     static {
         // Recupera la versione di Bukkit, es: 1.20.4-R0.1-SNAPSHOT
@@ -17,6 +20,7 @@ public class VersionUtil {
 
         VersionEnum cleanVersion;
         try {
+            log.info("Detected server version: {}", VERSION + subVersion);
             cleanVersion = VersionEnum.valueOf(VERSION + subVersion);
         } catch (IllegalArgumentException e) {
             try {

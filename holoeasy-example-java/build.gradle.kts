@@ -21,6 +21,7 @@
 plugins {
     id("buildlogic.java-conventions")
     id("com.gradleup.shadow") version "8.3.5"
+    id("xyz.jpenilla.run-paper") version "2.3.0"
 }
 
 dependencies {
@@ -47,6 +48,19 @@ tasks {
         relocate("io.github.retrooper.packetevents", "org.holoeasy.plugin.packetevents")
         relocate("com.github.retrooper.packetevents", "org.holoeasy.plugin.packetevents")
         relocate("net.kyori", "org.holoeasy.plugin.kyori")
+    }
+
+    runServer {
+        minecraftVersion("1.21.10")
+
+        downloadPlugins {
+            modrinth("MiniPlaceholders", "7caNTwMh")
+            hangar("PlaceholderAPI", "2.11.6")
+            hangar("ViaVersion", "5.6.0")
+            hangar("ViaBackwards", "5.6.0")
+        }
+
+        jvmArgs("-Dcom.mojang.eula.agree=true")
     }
 }
 

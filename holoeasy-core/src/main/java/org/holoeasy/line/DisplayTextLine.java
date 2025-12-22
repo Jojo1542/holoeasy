@@ -25,6 +25,13 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
     public static final byte FLAG_IS_SEE_THROUGH = 0x02;
     public static final byte FLAG_USE_DEFAULT_BACKGROUND = 0x04;
 
+    // Metadata indices for TextDisplay specific fields (1.21.10+)
+    protected static final int INDEX_TEXT = 23;
+    protected static final int INDEX_LINE_WIDTH = 24;
+    protected static final int INDEX_BACKGROUND_COLOR = 25;
+    protected static final int INDEX_TEXT_OPACITY = 26;
+    protected static final int INDEX_TEXT_OPTIONS = 27;
+
     // Text Display specific properties
     private int lineWidth = 200;
     private int backgroundColor = 0x40000000;
@@ -57,8 +64,6 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
 
         Component textComponent = getValue(player);
 
-        addDisplayBaseMetadata(entityData);
-
         switch (VersionUtil.CLEAN_VERSION) {
             case V1_8:
             case V1_9:
@@ -73,14 +78,20 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
             case V1_18:
                 throw new RuntimeException("DisplayTextLine is available since 1.19.4");
             case V1_19:
-                entityData.add(new EntityData<>(15, EntityDataTypes.BYTE, billboard));
+                // V1_19 uses different metadata indices
+                if (modifiedFields.contains(INDEX_BILLBOARD)) {
+                    entityData.add(new EntityData<>(15, EntityDataTypes.BYTE, billboard));
+                }
                 entityData.add(new EntityData<>(22, EntityDataTypes.ADV_COMPONENT, textComponent));
                 entityData.add(new EntityData<>(23, EntityDataTypes.INT, lineWidth));
                 entityData.add(new EntityData<>(24, EntityDataTypes.INT, backgroundColor));
                 entityData.add(new EntityData<>(25, EntityDataTypes.BYTE, textOpacity));
                 break;
             case V1_21:
-                entityData.add(new EntityData<>(15, EntityDataTypes.BYTE, billboard));
+                // V1_21 uses different metadata indices
+                if (modifiedFields.contains(INDEX_BILLBOARD)) {
+                    entityData.add(new EntityData<>(15, EntityDataTypes.BYTE, billboard));
+                }
                 entityData.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, textComponent));
                 entityData.add(new EntityData<>(24, EntityDataTypes.INT, lineWidth));
                 entityData.add(new EntityData<>(25, EntityDataTypes.INT, backgroundColor));
@@ -89,12 +100,22 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
             case V1_21_10:
             case V1_21_11:
             default:
-                // Text Display specific (1.21.10+)
-                entityData.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, textComponent));
-                entityData.add(new EntityData<>(24, EntityDataTypes.INT, lineWidth));
-                entityData.add(new EntityData<>(25, EntityDataTypes.INT, backgroundColor));
-                entityData.add(new EntityData<>(26, EntityDataTypes.BYTE, textOpacity));
-                entityData.add(new EntityData<>(27, EntityDataTypes.BYTE, textOptions));
+                // 1.21.10+ uses addDisplayBaseMetadata with correct indices
+                addDisplayBaseMetadata(entityData);
+                // Text Display specific - always send text, only send others if modified
+                entityData.add(new EntityData<>(INDEX_TEXT, EntityDataTypes.ADV_COMPONENT, textComponent));
+                if (modifiedFields.contains(INDEX_LINE_WIDTH)) {
+                    entityData.add(new EntityData<>(INDEX_LINE_WIDTH, EntityDataTypes.INT, lineWidth));
+                }
+                if (modifiedFields.contains(INDEX_BACKGROUND_COLOR)) {
+                    entityData.add(new EntityData<>(INDEX_BACKGROUND_COLOR, EntityDataTypes.INT, backgroundColor));
+                }
+                if (modifiedFields.contains(INDEX_TEXT_OPACITY)) {
+                    entityData.add(new EntityData<>(INDEX_TEXT_OPACITY, EntityDataTypes.BYTE, textOpacity));
+                }
+                if (modifiedFields.contains(INDEX_TEXT_OPTIONS)) {
+                    entityData.add(new EntityData<>(INDEX_TEXT_OPTIONS, EntityDataTypes.BYTE, textOptions));
+                }
                 break;
         }
 
@@ -104,21 +125,25 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
 
     public DisplayTextLine lineWidth(int lineWidth) {
         this.lineWidth = lineWidth;
+        modifiedFields.add(INDEX_LINE_WIDTH);
         return this;
     }
 
     public DisplayTextLine backgroundColor(@NotNull Color backgroundColor) {
         this.backgroundColor = backgroundColor.asRGB();
+        modifiedFields.add(INDEX_BACKGROUND_COLOR);
         return this;
     }
 
     public DisplayTextLine backgroundColor(int backgroundColor) {
         this.backgroundColor = backgroundColor;
+        modifiedFields.add(INDEX_BACKGROUND_COLOR);
         return this;
     }
 
     public DisplayTextLine textOpacity(byte textOpacity) {
         this.textOpacity = textOpacity;
+        modifiedFields.add(INDEX_TEXT_OPACITY);
         return this;
     }
 
@@ -131,6 +156,7 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
         } else {
             this.textOptions &= ~FLAG_HAS_SHADOW;
         }
+        modifiedFields.add(INDEX_TEXT_OPTIONS);
         return this;
     }
 
@@ -143,6 +169,7 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
         } else {
             this.textOptions &= ~FLAG_IS_SEE_THROUGH;
         }
+        modifiedFields.add(INDEX_TEXT_OPTIONS);
         return this;
     }
 
@@ -156,6 +183,7 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
         } else {
             this.textOptions &= ~FLAG_USE_DEFAULT_BACKGROUND;
         }
+        modifiedFields.add(INDEX_TEXT_OPTIONS);
         return this;
     }
 
@@ -166,6 +194,7 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
     public DisplayTextLine alignment(TextAlignment alignment) {
         // Clear alignment bits (bits 3-4) and set new value
         this.textOptions = (byte) ((this.textOptions & 0x07) | (alignment.getValue() << 3));
+        modifiedFields.add(INDEX_TEXT_OPTIONS);
         return this;
     }
 
@@ -175,6 +204,7 @@ public class DisplayTextLine extends AbstractDisplayLine<Component, DisplayTextL
      */
     public DisplayTextLine textOptions(byte textOptions) {
         this.textOptions = textOptions;
+        modifiedFields.add(INDEX_TEXT_OPTIONS);
         return this;
     }
 
