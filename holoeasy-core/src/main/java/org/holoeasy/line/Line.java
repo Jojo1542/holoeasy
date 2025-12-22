@@ -133,6 +133,8 @@ public abstract class Line<T> {
         @ApiStatus.Experimental
         DISPLAY_TEXT_LINE,
         @ApiStatus.Experimental
+        DISPLAY_ITEM_LINE,
+        @ApiStatus.Experimental
         INTERACTION_LINE,
     }
 }

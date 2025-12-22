@@ -19,8 +19,7 @@ import java.util.List;
 import java.util.function.Function;
 
 @ApiStatus.Experimental
-public class DisplayBlockLine extends Line<Material> {
-
+public class DisplayBlockLine extends AbstractDisplayLine<Material, DisplayBlockLine> {
 
     public DisplayBlockLine(Hologram hologram, Function<Player, Material> valueSupplier) {
         super(hologram, EntityTypes.BLOCK_DISPLAY, valueSupplier);
@@ -48,7 +47,9 @@ public class DisplayBlockLine extends Line<Material> {
 
         List<EntityData<?>> entityData = new ArrayList<>();
 
-        switch ( VersionUtil.CLEAN_VERSION) {
+        addDisplayBaseMetadata(entityData);
+
+        switch (VersionUtil.CLEAN_VERSION) {
             case V1_8:
             case V1_9:
             case V1_10:
@@ -64,6 +65,9 @@ public class DisplayBlockLine extends Line<Material> {
             case V1_19:
                 entityData.add(new EntityData<>(22, EntityDataTypes.BLOCK_STATE, blockState.getGlobalId()));
                 break;
+            case V1_21:
+            case V1_21_10:
+            case V1_21_11:
             default:
                 entityData.add(new EntityData<>(23, EntityDataTypes.BLOCK_STATE, blockState.getGlobalId()));
                 break;
@@ -71,12 +75,5 @@ public class DisplayBlockLine extends Line<Material> {
 
         WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata(entityID, entityData);
         PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
-    }
-
-    // Builder
-
-    public DisplayBlockLine yOffset(double yOffset) {
-        super.setYOffset(yOffset);
-        return this;
     }
 }

@@ -13,12 +13,17 @@ public class VersionUtil {
         // es: 1.20.4 o 1.14
         String[] parts = bkVersion.split("\\.");
         VERSION = "V" + parts[0] + "_" + parts[1];
+        String subVersion = parts.length > 2 ? "_" + parts[2] : "";
 
         VersionEnum cleanVersion;
         try {
-            cleanVersion = VersionEnum.valueOf(VERSION);
+            cleanVersion = VersionEnum.valueOf(VERSION + subVersion);
         } catch (IllegalArgumentException e) {
-            cleanVersion = VersionEnum.LATEST;
+            try {
+                cleanVersion = VersionEnum.valueOf(VERSION);
+            } catch (IllegalArgumentException ex) {
+                cleanVersion = VersionEnum.LATEST;
+            }
         }
         CLEAN_VERSION = cleanVersion;
     }

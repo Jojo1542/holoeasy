@@ -1,5 +1,6 @@
 package org.holoeasy.plugin;
 
+import io.github.retrooper.packetevents.adventure.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.holoeasy.HoloEasy;
@@ -17,7 +18,8 @@ public class MyCounterHolo extends Hologram {
     private int clickCount = 0;
     private final Map<UUID, Integer> playerClickCounts = new java.util.HashMap<>();
 
-    private final DisplayTextLine global_counter = displayTextLine(player -> "Clicked " + clickCount + " times")
+    private final DisplayTextLine global_counter = displayTextLine(player -> LegacyComponentSerializer.legacyAmpersand().deserialize("Clicked " + clickCount + " times"))
+            .shadow(true)
             .backgroundColor(0x80FF0000)
             .yOffset(1.55f);
 

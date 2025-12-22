@@ -3,6 +3,7 @@ package org.holoeasy.hologram;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityTeleport;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -57,10 +58,15 @@ public class Hologram {
         return lines;
     }
 
-    protected @NotNull BlockLine blockLine(@NotNull Function<@NotNull Player, @NotNull ItemStack> blockSupplier) {
+    public @NotNull BlockLine blockLine(@NotNull Function<@NotNull Player, @NotNull ItemStack> blockSupplier) {
         BlockLine line = new BlockLine(this, blockSupplier);
         lines.add(line);
         return line;
+    }
+
+    public Hologram blockLine(@NotNull Material material) {
+        blockLine(player -> new ItemStack(material));
+        return this;
     }
 
     protected @NotNull ItemLine itemLine(@NotNull Function<@NotNull Player, @NotNull ItemStack> itemSupplier) {
@@ -69,17 +75,44 @@ public class Hologram {
         return line;
     }
 
+    public Hologram itemLine(@NotNull Material material) {
+        itemLine(player -> new ItemStack(material));
+        return this;
+    }
+
     protected @NotNull TextLine textLine(@NotNull Function<@NotNull Player, @NotNull String> textSupplier) {
         TextLine line = new TextLine(this, textSupplier);
         lines.add(line);
         return line;
     }
 
+    public Hologram textLine(@NotNull String text) {
+        textLine(player -> text);
+        return this;
+    }
+
+    protected @NotNull TextComponentLine componentLine(@NotNull Function<@NotNull Player, @NotNull Component> textSupplier) {
+        TextComponentLine line = new TextComponentLine(this, textSupplier);
+        lines.add(line);
+        return line;
+    }
+
+    public Hologram componentLine(@NotNull Component text) {
+        componentLine(player -> text);
+        return this;
+    }
+
+
     @ApiStatus.Experimental
-    protected @NotNull DisplayTextLine displayTextLine(@NotNull Function<@NotNull Player, @NotNull String> textSupplier) {
+    protected @NotNull DisplayTextLine displayTextLine(@NotNull Function<@NotNull Player, @NotNull Component> textSupplier) {
         DisplayTextLine line = new DisplayTextLine(this, textSupplier);
         lines.add(line);
         return line;
+    }
+
+    public Hologram displayTextLine(@NotNull Component text) {
+        displayTextLine(player -> text);
+        return this;
     }
 
     @ApiStatus.Experimental
@@ -87,6 +120,11 @@ public class Hologram {
         DisplayBlockLine line = new DisplayBlockLine(this, materialSupplier);
         lines.add(line);
         return line;
+    }
+
+    public Hologram displayBlockLine(@NotNull Material material) {
+        displayBlockLine(player -> material);
+        return this;
     }
 
     @ApiStatus.Experimental

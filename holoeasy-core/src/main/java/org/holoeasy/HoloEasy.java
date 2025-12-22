@@ -71,6 +71,10 @@ public class HoloEasy {
         return simplepool;
     }
 
+    public void startPool(IHologramPool<?> pool) {
+        pools.add(pool);
+    }
+
     @ApiStatus.Experimental
     public void destroyPools() {
         for (IHologramPool<?> pool : pools) {

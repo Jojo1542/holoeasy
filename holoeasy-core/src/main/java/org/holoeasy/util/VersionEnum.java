@@ -17,6 +17,8 @@ public enum VersionEnum {
     V1_19,
     V1_20,
     V1_21,
+    V1_21_10,
+    V1_21_11,
 
     // per compatibilità futura
     LATEST
