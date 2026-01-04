@@ -129,6 +129,21 @@ public class CompositeDisplayLine extends Line<Void> {
         }
     }
 
+    @Override
+    public void teleport(@NotNull Player player) {
+        Location loc = getLocation();
+        if (loc == null) return;
+
+        for (CompositeElement element : elements) {
+            if (element.hasEntity()) {
+                if (element instanceof AbstractDisplayElement) {
+                    ((AbstractDisplayElement<?, ?>) element).setSpawnLocation(loc);
+                }
+                element.teleport(player, loc);
+            }
+        }
+    }
+
     /**
      * Calculate X offsets for each element based on alignment.
      */

@@ -51,7 +51,7 @@ dependencies {
 }
 
 group = "org.holoeasy"
-project.version = "5.0.1"
+project.version = "5.0.2"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 val version = project.version.toString()

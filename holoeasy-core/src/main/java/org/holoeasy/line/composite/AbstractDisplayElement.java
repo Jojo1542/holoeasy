@@ -8,6 +8,7 @@ import com.github.retrooper.packetevents.util.Quaternion4f;
 import com.github.retrooper.packetevents.util.Vector3f;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDestroyEntities;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityTeleport;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import org.bukkit.Location;
@@ -125,6 +126,17 @@ public abstract class AbstractDisplayElement<T, SELF extends AbstractDisplayElem
     @Override
     public void despawn(@NotNull Player player) {
         WrapperPlayServerDestroyEntities packet = new WrapperPlayServerDestroyEntities(entityId);
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
+    }
+
+    @Override
+    public void teleport(@NotNull Player player, @NotNull Location location) {
+        this.spawnLocation = location;
+        WrapperPlayServerEntityTeleport packet = new WrapperPlayServerEntityTeleport(
+                entityId,
+                SpigotConversionUtil.fromBukkitLocation(location),
+                false
+        );
         PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
     }
 

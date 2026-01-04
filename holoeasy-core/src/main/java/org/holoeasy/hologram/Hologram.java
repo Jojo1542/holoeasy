@@ -172,13 +172,7 @@ public class Hologram {
         // send teleport packets to all players seeing this hologram
         for (Player seeingPlayer : pvt.getSeeingPlayers()) {
             for (Line<?> line : lines) {
-
-                WrapperPlayServerEntityTeleport packet = new WrapperPlayServerEntityTeleport(
-                        line.getEntityID(),
-                        SpigotConversionUtil.fromBukkitLocation(line.getLocation()),
-                        false
-                );
-                PacketEvents.getAPI().getPlayerManager().sendPacket(seeingPlayer, packet);
+                line.teleport(seeingPlayer);
             }
         }
     }

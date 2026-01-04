@@ -48,6 +48,13 @@ public interface CompositeElement {
     void update(@NotNull Player player, float x, float y, float z);
 
     /**
+     * Called to teleport the entity to a new location.
+     * @param player the player to send the teleport packet to
+     * @param location the new location
+     */
+    void teleport(@NotNull Player player, @NotNull org.bukkit.Location location);
+
+    /**
      * Check if this element renders an entity (spacers don't).
      */
     default boolean hasEntity() {

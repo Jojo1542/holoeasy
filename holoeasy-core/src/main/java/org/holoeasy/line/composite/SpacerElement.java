@@ -45,6 +45,11 @@ public class SpacerElement implements CompositeElement {
     }
 
     @Override
+    public void teleport(@NotNull Player player, @NotNull org.bukkit.Location location) {
+        // No-op: spacers don't have entities
+    }
+
+    @Override
     public boolean hasEntity() {
         return false;
     }

@@ -46,13 +46,10 @@ public abstract class Line<T> {
         return valueFunction.apply(player);
     }
 
-    @ApiStatus.Internal
     public abstract void show(@NotNull Player player);
 
-    @ApiStatus.Internal
     public abstract void hide(@NotNull Player player);
 
-    @ApiStatus.Internal
     public abstract void update(@NotNull Player player);
 
     public void updateAll() {
@@ -118,6 +115,22 @@ public abstract class Line<T> {
         PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
 
         return true;
+    }
+
+    /**
+     * Send teleport packets to move this line to its current location.
+     * Subclasses with multiple entities should override this method.
+     */
+    public void teleport(@NotNull Player player) {
+        Location loc = location;
+        if (loc == null) return;
+
+        WrapperPlayServerEntityTeleport packet = new WrapperPlayServerEntityTeleport(
+                entityID,
+                SpigotConversionUtil.fromBukkitLocation(loc),
+                false
+        );
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
     }
 
 
